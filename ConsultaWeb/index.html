@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestión de Usuarios - DevOps</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; background: #f5f7fa; color: #1f2937; }
+    .card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
+    input, button { padding: 10px 12px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 14px; }
+    button { background: #2563eb; color: #fff; border: none; cursor: pointer; }
+    button.delete { background: #dc2626; padding: 6px 10px; font-size: 12px; }
+    form { display: flex; gap: 8px; flex-wrap: wrap; }
+    ul { list-style: none; padding: 0; }
+    li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+    #health-status { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 data-testid="app-title">Panel DevOps - Usuarios</h1>
+    <p>Estado del servidor: <span id="health-status" data-testid="health-status">Cargando...</span></p>
+  </div>
+
+  <div class="card">
+    <h2>Registrar usuario</h2>
+    <form id="user-form">
+      <input id="name" data-testid="input-name" type="text" placeholder="Nombre" required />
+      <input id="email" data-testid="input-email" type="email" placeholder="Correo electrónico" required />
+      <button type="submit" data-testid="btn-submit">Guardar</button>
+    </form>
+    <p id="form-msg" data-testid="form-msg"></p>
+  </div>
+
+  <div class="card">
+    <h2>Usuarios registrados</h2>
+    <ul id="users-list" data-testid="users-list"></ul>
+  </div>
+
+  <script>
+    async function cargarSalud() {
+      const res = await fetch('/api/health');
+      const json = await res.json();
+      document.getElementById('health-status').textContent = json.data?.status || 'OK';
+    }
+
+    async function cargarUsuarios() {
+      const res = await fetch('/api/users');
+      const json = await res.json();
+      const lista = document.getElementById('users-list');
+      lista.innerHTML = '';
+      (json.data || []).forEach((u) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span><strong>${u.name}</strong> (${u.email})</span>
+          <button class="delete" onclick="eliminarUsuario(${u.id})">Eliminar</button>`;
+        lista.appendChild(li);
+      });
+    }
+
+    async function eliminarUsuario(id) {
+      await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      cargarUsuarios();
+    }
+
+    document.getElementById('user-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email }),
+      });
+      const msg = document.getElementById('form-msg');
+      if (res.ok) {
+        msg.textContent = 'Usuario creado correctamente';
+        e.target.reset();
+        cargarUsuarios();
+      } else {
+        const err = await res.json();
+        msg.textContent = err.data?.error || 'Error al crear usuario';
+      }
+    });
+
+    cargarSalud();
+    cargarUsuarios();
+  </script>
+</body>
+</html>
