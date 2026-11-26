@@ -4,4 +4,4 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 EXPOSE 80 6061
-CMD ["node", "index.js"]
+CMD ["node", "--require", "./telemetry.js", "index.js"]
